@@ -1,12 +1,9 @@
-use reqwest::*;
 use std::collections::HashMap;
-use tokio::task;
-use futures::prelude::*;
-use tokio::*;
 
 
-async fn get_price() {
-    let resp = reqwest::get("https://api.coingecko.com/api/v3/simple/price?ids=cardano&vs_currencies=usd")
+async fn get_price(name: &str) {
+    let resp = reqwest::get(
+        format!("https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies=usd", name))
         .await.unwrap();
 
     let parsed = resp
@@ -15,19 +12,21 @@ async fn get_price() {
     println!("{:?}", parsed);
 }
 
-async fn get_all_coins() {
+async fn get_all_coins() -> Vec<String>{
     let resp = reqwest::get("https://api.coingecko.com/api/v3/coins/list")
         .await.unwrap();
 
     let parsed = resp
         .json::<Vec<HashMap<String, String>>>()
         .await.unwrap();
-    println!("{:?}", parsed);
+
+    let names: Vec<String > = parsed.iter().map(|x| String::from(&x["name"])).collect();
+    names
 }
 
 
 fn main() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    let future = get_all_coins();
-    rt.block_on(future);
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let coins = rt.block_on(get_all_coins());
+    rt.block_on(get_price(&coins[0]));
 }
